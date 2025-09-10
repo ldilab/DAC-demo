@@ -1,0 +1,36 @@
+# Inputs
+## Problem
+```plaintext
+{{ problem }}
+```
+
+# Instruction
+Given the problem description, you need to design the modularized solution.
+Design the functions and their functionality for the solution, as detailed as possible.
+Each function should be small as possible so that can follow the single responsibility principle for reusability and maintainability.
+Only the designed functions will be used to implement the solution.
+
+# Requirements
+- The output should be written in a separate code block using three backticks (```) at the beginning and end.
+- Do not write the actual code.
+- Do not write the testcase runner.
+- Do not describe the implementation details and add any comments.
+
+# Output Example
+```python
+[
+    {
+        "function": "function_name",
+        "functionality": "Description of what this function does"
+    },
+    {
+        "function": "another_function_name",
+        "functionality": "Description of what this function does"
+    }
+]
+```
+
+# Output Format{% raw %}
+```python
+{{ code_plan }}
+```{% endraw %}

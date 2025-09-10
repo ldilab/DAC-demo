@@ -1,0 +1,40 @@
+# Inputs
+## Problem
+```plaintext
+{{ problem }}
+```
+
+## Code Plan
+```python
+{{ code_plan }}
+```
+
+# Instruction
+Given the problem description and code plan, write natural language pseudocode for each function in the code plan.
+
+# Requirements
+- The output should be written in a separate code block using three backticks (```) at the beginning and end.
+- Do not write the actual code.
+- Do not write the testcase runner.
+- Do not describe the implementation details and add any comments.
+
+# Output Example
+```python
+[
+    {
+        "function": "function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function"
+    },
+    {
+        "function": "another_function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function"
+    }
+]
+```
+
+# Output Format{% raw %}
+```python
+{{ pseudocodes }}
+```{% endraw %}

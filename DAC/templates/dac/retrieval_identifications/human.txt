@@ -1,0 +1,45 @@
+# Inputs
+## Problem
+```plaintext
+{{ problem }}
+```
+
+## Code Plan and Pseudocode
+```python
+{{ pseudocodes }}
+```
+
+
+# Instruction
+Given the problem description and code plan, think whether retrieving relevant code snippets is need to implement the function.
+Retrieval is needed if the function requires specific logic or algorithms that are not trivial or commonly known.
+The retrieved code snippet will be used to implement the function in the code plan.
+
+# Requirements
+- The output should be written in a separate code block using three backticks (```) at the beginning and end.
+- Do not write the actual code.
+- Do not write the testcase runner.
+- Do not describe the implementation details and add any comments.
+
+# Output Example
+```python
+[
+    {
+        "function": "function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function",
+        "do_retrieval": true
+    },
+    {
+        "function": "another_function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function",
+        "do_retrieval": false
+    }
+]
+```
+
+# Output Format{% raw %}
+```python
+{{ retrieval_identifications }}
+```{% endraw %}

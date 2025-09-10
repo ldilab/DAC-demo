@@ -1,0 +1,47 @@
+# Inputs
+## Problem
+```plaintext
+{{ problem }}
+```
+
+## Code Plan, Pseudocode, and Retrieval Identifications
+```python
+{{ retrieval_identifications }}
+```
+
+
+# Instruction
+Given the problem description and code plan, generate the retrieval queries for the functions that require code retrieval.
+The retrieval queries should be based on the pseudocode provided in the code plan.
+Retrieval query should clearly state the functionality of the function and the pseudocode that describes its logic.
+
+# Requirements
+- The output should be written in a separate code block using three backticks (```) at the beginning and end.
+- Do not write the actual code.
+- Do not write the testcase runner.
+- Do not describe the implementation details and add any comments.
+
+# Output Example
+```python
+[
+    {
+        "function": "function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function",
+        "do_retrieval": true,
+        "retrieval_query": "A function that does something specific based on the pseudocode"
+    },
+    {
+        "function": "another_function_name",
+        "functionality": "Description of what this function does",
+        "pseudocode": "Description of the pseudocode for this function",
+        "do_retrieval": false,
+        "retrieval_query": ""
+    }
+]
+```
+
+# Output Format{% raw %}
+```python
+{{ retrieval_queries }}
+```{% endraw %}
