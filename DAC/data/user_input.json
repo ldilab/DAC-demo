@@ -1,0 +1,98 @@
+[
+  {
+    "id": "user_input/example",
+    "problem": "There are three cards with letters $\\texttt{a}$, $\\texttt{b}$, $\\texttt{c}$ placed in a row in some order. You can do the following operation at most once: \n\n- Pick two cards, and swap them. Is it possible that the row becomes $\\texttt{abc}$ after the operation? Output \"YES\" if it is possible, and \"NO\" otherwise.\n\nInput\n\nThe first line contains a single integer $t$ ($1 \\leq t \\leq 6$) — the number of test cases.\n\nThe only line of each test case contains a single string consisting of each of the three characters $\\texttt{a}$, $\\texttt{b}$, and $\\texttt{c}$ exactly once, representing the cards.\n\nOutput\n\nFor each test case, output \"YES\" if you can make the row $\\texttt{abc}$ with at most one operation, or \"NO\" otherwise.\n\nYou can output the answer in any case (for example, the strings \"yEs\", \"yes\", \"Yes\" and \"YES\" will be recognized as a positive answer).\n\nSample Input 1:\n6\nabc\nacb\nbac\nbca\ncab\ncba\n\nSample Output 1:\nYES\nYES\nYES\nNO\nNO\nYES\n\nNote\n\nIn the first test case, we don't need to do any operations, since the row is already $\\texttt{abc}$.\n\nIn the second test case, we can swap $\\texttt{c}$ and $\\texttt{b}$: $\\texttt{acb} \\to \\texttt{abc}$.\n\nIn the third test case, we can swap $\\texttt{b}$ and $\\texttt{a}$: $\\texttt{bac} \\to \\texttt{abc}$.\n\nIn the fourth test case, it is impossible to make $\\texttt{abc}$ using at most one operation.",
+
+    "code_plan": [
+      {
+        "function": "is_possible_to_form_abc",
+        "functionality": "Checks if the given string can be transformed into 'abc' with at most one swap."
+      },
+      {
+        "function": "swap_positions",
+        "functionality": "Swaps two characters in a string and returns the new string."
+      },
+      {
+        "function": "read_input",
+        "functionality": "Reads the number of test cases and the respective strings from input."
+      },
+      {
+        "function": "output_results",
+        "functionality": "Outputs the results for each test case as 'YES' or 'NO'."
+      }
+    ],
+
+    "pseudocodes": [
+      {
+        "function": "is_possible_to_form_abc",
+        "functionality": "Checks if the given string can be transformed into 'abc' with at most one swap.",
+        "pseudocode": "If the input string is equal to 'abc', return 'YES'. If the input string contains two characters in the wrong positions compared to 'abc', return 'YES'. Otherwise, return 'NO'."
+      },
+      {
+        "function": "swap_positions",
+        "functionality": "Swaps two characters in a string and returns the new string.",
+        "pseudocode": "Create a list from the input string. Swap the elements at the two specified indices. Convert the list back to a string and return it."
+      },
+      {
+        "function": "read_input",
+        "functionality": "Reads the number of test cases and the respective strings from input.",
+        "pseudocode": "Read the integer t from input. For each test case, read a string of three characters and store it in a list."
+      },
+      {
+        "function": "output_results",
+        "functionality": "Outputs the results for each test case as 'YES' or 'NO'.",
+        "pseudocode": "For each result in the results list, print 'YES' if the result is true, otherwise print 'NO'."
+      }
+    ],
+
+    "retrieval_identifications": [
+      {
+        "function": "is_possible_to_form_abc",
+        "functionality": "Checks if the given string can be transformed into 'abc' with at most one swap.",
+        "pseudocode": "If the input string is equal to 'abc', return 'YES'. If the input string contains two characters in the wrong positions compared to 'abc', return 'YES'. Otherwise, return 'NO'.",
+        "do_retrieval": true
+      },
+      {
+        "function": "swap_positions",
+        "functionality": "Swaps two characters in a string and returns the new string.",
+        "pseudocode": "Create a list from the input string. Swap the elements at the two specified indices. Convert the list back to a string and return it.",
+        "do_retrieval": false
+      },
+      {
+        "function": "read_input",
+        "functionality": "Reads the number of test cases and the respective strings from input.",
+        "pseudocode": "Read the integer t from input. For each test case, read a string of three characters and store it in a list.",
+        "do_retrieval": false
+      },
+      {
+        "function": "output_results",
+        "functionality": "Outputs the results for each test case as 'YES' or 'NO'.",
+        "pseudocode": "For each result in the results list, print 'YES' if the result is true, otherwise print 'NO'.",
+        "do_retrieval": false
+      }
+    ],
+
+    "retrieval_queries": [
+      {
+        "function": "is_possible_to_form_abc",
+        "functionality": "Checks if the given string can be transformed into 'abc' with at most one swap.",
+        "pseudocode": "If the input string is equal to 'abc', return 'YES'. If the input string contains two characters in the wrong positions compared to 'abc', return 'YES'. Otherwise, return 'NO'.",
+        "do_retrieval": true,
+        "retrieval_query": "A function that checks if the string can be changed to 'abc' by examining character positions against the target string and allowing for one swap."
+      }
+    ],
+
+    "retrievals": [
+      "def min_swaps(str1: str, str2: str) -> int or str:\n    \"\"\"\n    Count the minimum number of swaps required to convert one binary string to another.\n\n    :param str1: First binary string\n    :param str2: Second binary string\n    :return: Minimum number of swaps required or \"Not Possible\"\n    \"\"\"\n    count = count_differences(str1, str2)\n    if is_swap_possible(count):\n        return calculate_min_swaps(count)\n    else:\n        return \"Not Possible\""
+    ],
+
+    "retrieved_codes_with_backticks": [
+      "**Function 1**\n```python\ndef min_swaps(str1: str, str2: str) -> int or str:\n    \"\"\"\n    Count the minimum number of swaps required to convert one binary string to another.\n\n    :param str1: First binary string\n    :param str2: Second binary string\n    :return: Minimum number of swaps required or \"Not Possible\"\n    \"\"\"\n    count = count_differences(str1, str2)\n    if is_swap_possible(count):\n        return calculate_min_swaps(count)\n    else:\n        return \"Not Possible\"\n```"
+    ],
+
+    "code": [
+      "# YOUR CODE HERE\ndef can_form_abc(s):\n    if s == \"abc\":\n        return \"YES\"\n    elif s in [\"acb\", \"bac\", \"cba\", \"cab\"]:\n        return \"YES\"\n    else:\n        return \"NO\"\n\nt = int(input())\nfor _ in range(t):\n    s = input().strip()\n    print(can_form_abc(s))"
+    ]
+  }
+
+]

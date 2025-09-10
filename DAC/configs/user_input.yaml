@@ -1,0 +1,195 @@
+source:
+  - name: user_input
+    type: user_input
+  - name: user_input-like
+    type: json
+    kwargs:
+      path: data/user_input.json
+      sort_key: id
+
+dataset:
+  - name: target
+    type: user_input
+  - name: example
+    type: dict
+    kwargs:
+      primary_key: id
+      fields:
+        - name: id
+          source: user_input-like
+          key: id
+        - name: problem
+          source: user_input-like
+          key: problem
+        - name: code_plan
+          source: user_input-like
+          key: code_plan
+        - name: pseudocodes
+          source: user_input-like
+          key: pseudocodes
+        - name: retrieval_identifications
+          source: user_input-like
+          key: retrieval_identifications
+        - name: retrieval_queries
+          source: user_input-like
+          key: retrieval_queries
+        - name: retrievals
+          source: user_input-like
+          key: retrievals
+        - name: retrieved_codes_with_backticks
+          source: user_input-like
+          key: retrieved_codes_with_backticks
+        - name: code
+          source: user_input-like
+          key: code
+
+graph:
+  entry_point: initialize
+
+  edges:
+    - pair: [initialize, __end__]
+      type: always
+
+  nodes:
+    - name: initialize
+      chains:
+        - name: code_plan
+          dependencies: []
+          input_keys: [problem]
+          output_keys: [code_plan]
+          type: cot
+          kwargs:
+            n: 1
+            llm: !inc configs/llm/llama3.1_70b-greedy.yaml
+            parsers:
+              - type: code_block
+            prompt:
+              type: chat
+              kwargs:
+                body_template_paths: ["templates/dac/code_plan"]
+        - name: pseudocodes
+          dependencies: [code_plan]
+          input_keys: [code_plan, problem]
+          output_keys: [pseudocodes]
+          type: cot
+          kwargs:
+            n: 1
+            llm: !inc configs/llm/llama3.1_70b-nucleus.yaml
+            parsers:
+              - type: code_block
+            prompt:
+              type: chat
+              kwargs:
+                body_template_paths: ["templates/dac/pseudocodes"]
+        - name: retrieval_identifications
+          dependencies: [code_plan]
+          input_keys: [pseudocodes, problem]
+          output_keys: [retrieval_identifications]
+          type: cot
+          kwargs:
+            n: 1
+            llm: !inc configs/llm/llama3.1_70b-greedy.yaml
+            parsers:
+              - type: code_block
+            prompt:
+              type: chat
+              kwargs:
+                body_template_paths: ["templates/dac/retrieval_identifications"]
+        - name: retrieval_queries
+          dependencies: [retrieval_identifications]
+          input_keys: [retrieval_identifications, problem]
+          output_keys: [retrieval_queries]
+          type: cot
+          kwargs:
+            n: 1
+            llm: !inc configs/llm/llama3.1_70b-greedy.yaml
+            parsers:
+              - type: code_block
+            prompt:
+              type: chat
+              kwargs:
+                body_template_paths: ["templates/dac/retrieval_queries"]
+
+        - name: retrieval_queries_target
+          type: custom_lambda
+          dependencies: [retrieval_queries]
+          input_keys: [retrieval_queries]
+          output_keys: [retrieval_queries_target]
+          kwargs:
+            src: [ retrieval_queries ]
+            func: |
+              from typing import *
+              def func(retrieval_queries: list[dict[str, Any]]) -> str:
+                  """retrieved_codes: list of list of Langchain Documents"""
+                  import json
+                  import ast
+                  try:
+                      retrieval_queries = json.loads(retrieval_queries)
+                  except:
+                      retrieval_queries = ast.literal_eval(retrieval_queries)
+
+                  retrieval_queries_target = [
+                      record["retrieval_query"]
+                      for record in retrieval_queries
+                  ]
+                  return retrieval_queries_target
+
+        - name: retrieved_codes
+          type: retriever
+          dependencies: [ retrieval_queries_target ]
+          input_keys: [ retrieval_queries_target ]
+          output_keys: [ retrieved_codes ]
+          kwargs:
+            method: elasticsearch
+            index_name: coderagbench_programmingsolution_modularized_functionality-gpt-4o-mini
+            embedding_model:
+              model: nomic-embed-text
+              platform: ollama
+              base_url: http://dilab9.snu.ac.kr:11434
+            query_key: retrieval_queries_target
+            search_kwargs:
+              k: 1
+
+        - name: retrieved_codes_with_backticks
+          type: custom_lambda
+          dependencies: [ retrieved_codes ]
+          input_keys: [ retrieved_codes ]
+          output_keys: [ retrieved_codes_with_backticks ]
+          kwargs:
+            src: [ retrieved_codes ]
+            func: |
+              from typing import *
+              def func(retrieved_codes: list[list[Any]]) -> str:
+                  """retrieved_codes: list of list of Langchain Documents"""
+                  import logging
+                  from langchain_core.documents import Document
+                  logging.warn("hi")
+                  page_contents = [doc.page_content for doc in retrieved_codes]
+                  codes = [doc.metadata.get("code", "") for doc in retrieved_codes]
+                  page_contents_with_backticks = [
+                      f"**Doc {rank}**\n```python\n# Functionality: {content}\n{code}\n```" for rank, (code, content) in enumerate(zip(codes, page_contents), start=1)
+                  ]
+                  output = "\n\n".join(page_contents_with_backticks)
+                  logging.warn(output)
+                  return output
+
+        - name: code
+          type: cot
+          dependencies: [ retrieved_codes_with_backticks ]
+          input_keys: [ problem, retrieved_codes_with_backticks ]
+          output_keys: [ code ]
+          kwargs:
+            n: 1
+            flatten: false
+            llm:
+              max_tokens: 4096
+              model: gpt-4o-mini
+              platform: openai
+              temperature: 0
+              top_p: 1
+            parsers:
+              - type: code_block
+            prompt:
+              type: chat
+              kwargs:
+                body_template_paths: [ "templates/dac/code" ]
