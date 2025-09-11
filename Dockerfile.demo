@@ -1,0 +1,42 @@
+# Demo frontend
+# --- Dev Dockerfile for React + Vite ---
+FROM node:20-alpine
+
+# Accept build args from compose
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+# (옵션) Alpine에서 TLS 에러 방지용 CA 설치
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
+WORKDIR /app
+
+# npm 다운로드 안정성 향상 (재시도/타임아웃/노이즈 제거)
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_factor=2 \
+    npm_config_fetch_retry_maxtimeout=600000 \
+    npm_config_fetch_timeout=120000 \
+    npm_config_audit=false \
+    npm_config_fund=false \
+    npm_config_loglevel=warn
+
+# 의존성 메타만 먼저 복사 (빌드 캐시 최적화)
+COPY ./demo/package*.json ./
+
+# lock 파일이 있으면 npm ci, 없으면 npm install
+# (RUN 구문을 하나로 합치면 레이어 줄고 캐시 깔끔)
+RUN if [ -f package-lock.json ]; then npm ci --prefer-offline; else npm install --prefer-offline; fi
+
+# 소스 복사
+COPY ./demo .
+
+# Vite dev 서버 포트
+EXPOSE 5175
+
+# 컨테이너에서 외부 접속 허용
+ENV HOST=0.0.0.0
+# 파일 변경 감지 문제시:
+# ENV CHOKIDAR_USEPOLLING=true
+
+# Vite dev 서버 실행
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5175"]

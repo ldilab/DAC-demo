@@ -127,6 +127,7 @@ class Server(BaseModel):
                         "retrieval_queries",
                         "retrieval_queries_target",
                         "retrieved_codes",
+                        "retrieved_codes_without_backticks",
                         "retrieved_codes_with_backticks",
                         "code",
                     ],

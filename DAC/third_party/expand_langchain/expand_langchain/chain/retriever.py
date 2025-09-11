@@ -53,6 +53,7 @@ def retriever_chain(
             # flatten list
             while type(inputs[0]) is list:
                 inputs = list(itertools.chain.from_iterable(inputs))
+                inputs = [item for item in inputs if item]
             while True:
                 try:
                     retrieval_result = retriever.batch(inputs)

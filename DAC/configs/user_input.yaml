@@ -150,6 +150,28 @@ graph:
             search_kwargs:
               k: 1
 
+        - name: retrieved_codes_without_backticks
+          type: custom_lambda
+          dependencies: [ retrieved_codes ]
+          input_keys: [ retrieved_codes ]
+          output_keys: [ retrieved_codes_without_backticks ]
+          kwargs:
+            src: [ retrieved_codes ]
+            func: |
+              from typing import *
+              def func(retrieved_codes: list[list[Any]]) -> str:
+                  """retrieved_codes: list of list of Langchain Documents"""
+                  import logging
+
+                  page_contents = [doc.page_content for doc in retrieved_codes]
+                  codes = [doc.metadata.get("code", "") for doc in retrieved_codes]
+                  page_contents_with_backticks = [
+                      f"**Doc {rank}**\n```python\n# Functionality: {content}\n{code}\n```" for rank, (code, content) in enumerate(zip(codes, page_contents), start=1)
+                  ]
+
+                  return page_contents_with_backticks
+
+
         - name: retrieved_codes_with_backticks
           type: custom_lambda
           dependencies: [ retrieved_codes ]
