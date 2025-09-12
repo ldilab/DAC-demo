@@ -62,10 +62,18 @@ function CardBox({ icon, title, right, children }) {
   );
 }
 
-function MonoBlock({ code }) {
+function MonoBlock({ code, className }) {
   return (
-    <pre className="rounded-xl border bg-white text-neutral-800 overflow-auto p-4 text-sm leading-relaxed">
-      <SyntaxHighlighter language="python" style={docco}>
+    <pre className={`rounded-xl border bg-white text-neutral-800 overflow-auto p-4 text-sm leading-relaxed ${className ?? ""}`}>
+      <SyntaxHighlighter
+        language="python"
+        style={docco}
+        wrapLongLines={true}
+        // customStyle로 pre 스타일 조정: 배경 투명, 패딩 제거
+        customStyle={{ background: "transparent", padding: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+        // 내부 코드 태그에도 줄바꿈 스타일 적용 (안정성)
+        codeTagProps={{ style: { whiteSpace: "pre-wrap", wordBreak: "break-word" } }}
+      >
         {String(code ?? "")}
       </SyntaxHighlighter>
     </pre>
