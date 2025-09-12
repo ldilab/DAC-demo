@@ -163,7 +163,8 @@ export default function CanvasCodeSynthesis() {
     retrievalIdentifications: [], // [{ function, functionality, pseudocode, do_retrieval }]
     retrievalQueries: [], // [{ function, retrieval_query, do_retrieval }]
     retrievalQueriesTarget: [], // string[][]
-    retrievalResults: [], // string[][] (per function or per query)
+    retrievalResults: [], // string[][] (per function or per query) — legacy/optional
+    retrievalRaw: [], // <-- NEW: store retrieved_codes_* exactly as received (no normalization)
     finalCode: "",
     stream: {},
   });
@@ -308,34 +309,21 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
-    // --- RETRIEVED CODES --- (prefer without backticks; order aligned to targeted queries)
-    if (msg.retrieved_codes_without_backticks || msg.retrieved_codes_with_backticks) {
-      const raw = msg.retrieved_codes_without_backticks || msg.retrieved_codes_with_backticks || [];
-      const arr = Array.isArray(raw) ? raw : [];
+    // --- RETRIEVED CODES (NEW: store raw exactly as received) ---
+    if (msg.retrieved_codes_with_backticks || msg.retrieved_codes_without_backticks) {
+      // We'll prefer the backticks variant if present, otherwise fallback to without_backticks.
+      const raw = msg.retrieved_codes_with_backticks || msg.retrieved_codes_without_backticks || [];
+      // store as-is (could be array-of-strings or array-of-array-of-strings)
+      const arr = Array.isArray(raw) ? raw : [raw];
 
-      const cleanBlock = (text) => {
-        let s = String(text ?? "");
-        // Extract inside first fenced block if present
-        const startFence = s.indexOf("```");
-        if (startFence !== -1) {
-          const endFence = s.indexOf("```", startFence + 3);
-          if (endFence !== -1) s = s.slice(startFence + 3, endFence);
-        }
-        s = stripFences(s);
-        if (s.startsWith("**Doc")) {
-          const nl = s.indexOf("\n");
-          s = nl !== -1 ? s.slice(nl + 1) : "";
-        }
-        return s.trim();
-      };
-
-      const normalize = (x) => {
-        if (Array.isArray(x)) return x.map((b) => cleanBlock(b)).filter(Boolean);
-        return [cleanBlock(x)];
-      };
-
-      const normalized = arr.map((row) => normalize(row).flat());
-      setBundle((prev) => ({ ...prev, retrievalResults: normalized }));
+      setBundle((prev) => ({
+        ...prev,
+        // keep legacy retrievalResults empty/unchanged to avoid old alignment logic using targets
+        retrievalResults: prev.retrievalResults || [],
+        // new: raw retrieval data exactly as received (no cleaning/normalization)
+        retrievalRaw: arr,
+        stream: { ...(prev.stream || {}), retrieved_raw: raw },
+      }));
       return;
     }
 
@@ -362,41 +350,14 @@ export default function CanvasCodeSynthesis() {
     const byIdent = indexBy(bundle.retrievalIdentifications || []);
     const byQuery = indexBy(bundle.retrievalQueries || []);
 
-    const allGroups = bundle.retrievalResults || []; // string[][] — typically 1 group per query
-    const allTargets = bundle.retrievalQueriesTarget || []; // string[][] — may be [ [q1, q2, ...] ] or per-function rows
+    // Note: we intentionally DO NOT try to align `retrievalRaw` to queries/targets here.
+    // Search results are shown in a separate box and are rendered raw.
 
     const merged = plan.map((item, idx) => {
       const f = item?.function || item?.name || `function-${idx + 1}`;
       const fromP = byPcs.get(f) || {};
       const fromI = byIdent.get(f) || {};
       const fromQ = byQuery.get(f) || {};
-
-      // Prefer row-aligned targets; fall back to the first row if a single shared list is provided.
-      const targeted =
-        (Array.isArray(allTargets[idx]) && allTargets[idx]) ||
-        (Array.isArray(allTargets[0]) && allTargets[0]) ||
-        [];
-
-      // Build results grouped by query (to preserve query order)
-      let resultsByQuery = [];
-      if (targeted.length && allGroups.length) {
-        if (allGroups.length === targeted.length) {
-          // 1:1 query→results group
-          resultsByQuery = targeted.map((q, qi) => ({ query: q, items: allGroups[qi] || [] }));
-        } else if (allGroups.length === 1) {
-          // Single merged result group for multiple queries → attach to first query, others empty
-          resultsByQuery = targeted.map((q, qi) => ({ query: q, items: qi === 0 ? allGroups[0] : [] }));
-        } else {
-          // Mismatch: show everything flattened under the first query
-          resultsByQuery = [{ query: targeted[0] || "All Queries", items: allGroups.flat() }];
-        }
-      } else if (Array.isArray(allGroups[idx])) {
-        // Fallback: per-function row if present
-        resultsByQuery = [{ query: "", items: allGroups[idx] || [] }];
-      } else if (allGroups.length) {
-        // Final fallback: show all
-        resultsByQuery = [{ query: "", items: allGroups.flat() }];
-      }
 
       return {
         index: idx,
@@ -405,11 +366,7 @@ export default function CanvasCodeSynthesis() {
         pseudocode: fromP?.pseudocode || fromI?.pseudocode || "",
         do_retrieval: Boolean(fromI?.do_retrieval ?? fromQ?.do_retrieval ?? false),
         retrieval_query: fromQ?.retrieval_query || "",
-        targeted_queries: targeted,
-        // keep old flat list for any legacy UI paths
-        results: resultsByQuery.flatMap((g) => g.items || []),
-        // new grouped-by-query structure used by the UI below
-        resultsByQuery,
+        targeted_queries: Array.isArray(bundle.retrievalQueriesTarget?.[idx]) ? bundle.retrievalQueriesTarget[idx] : (Array.isArray(bundle.retrievalQueriesTarget?.[0]) ? bundle.retrievalQueriesTarget[0] : []),
       };
     });
 
@@ -427,6 +384,7 @@ export default function CanvasCodeSynthesis() {
       retrievalQueries: [],
       retrievalQueriesTarget: [],
       retrievalResults: [],
+      retrievalRaw: [],
       finalCode: "",
       stream: {},
     });
@@ -725,6 +683,13 @@ export default function CanvasCodeSynthesis() {
                 </div>
               </div>
             )}
+            {/* stream log for debug */}
+            {logLines.length > 0 && (
+              <details className="mt-3">
+                <summary className="text-sm text-slate-600 cursor-pointer">Stream log (last {logLines.length} lines)</summary>
+                <pre className="mt-2 text-xs bg-slate-50 border rounded-lg p-2 max-h-40 overflow-auto">{logLines.join("\n")}</pre>
+              </details>
+            )}
           </CardBox>
 
           {/* 2–6) Retrieval Pipeline — function-first boxes that fill in progressively */}
@@ -767,19 +732,8 @@ export default function CanvasCodeSynthesis() {
                     </div>
                   )}
 
-                  {/* Search results — append ONLY the retrieved code in query order */}
-                  {st.do_retrieval && st.resultsByQuery?.some((g) => g.items?.length) && (
-                    <div className="mt-3">
-                      <div className="text-xs uppercase text-slate-500 mb-1">Search Result</div>
-                      <div className="space-y-3">
-                        {st.resultsByQuery.flatMap((grp, gidx) =>
-                          (grp.items || []).map((r, ridx) => (
-                            <MonoBlock key={`${gidx}-${ridx}`} code={r} />
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {/* NOTE: Search results are intentionally NOT rendered here anymore.
+                      They are displayed in the separate "Search Results" box below. */}
                 </div>
               ))
             ) : (
@@ -798,6 +752,37 @@ export default function CanvasCodeSynthesis() {
 
         {/* RIGHT COLUMN */}
         <div className="space-y-6">
+          {/* NEW: Search Results shown in its own box, rendering retrieved_* exactly as received */}
+          <CardBox icon={<Search className="h-5 w-5" />} title="Search Results">
+            {bundle.retrievalRaw && bundle.retrievalRaw.length ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold text-lg">Retrieved Code (raw)</div>
+                  <CopyButton text={Array.isArray(bundle.retrievalRaw) ? JSON.stringify(bundle.retrievalRaw, null, 2) : String(bundle.retrievalRaw)} />
+                </div>
+
+                <div className="space-y-2">
+                  {/* retrievalRaw may be array-of-strings or array-of-array-of-strings; flatten one level */}
+                  {bundle.retrievalRaw.flatMap((row, rowIdx) =>
+                    Array.isArray(row)
+                      ? row.map((item, i) => (
+                          <div key={`r-${rowIdx}-${i}`}>
+                            <MonoBlock code={item} />
+                          </div>
+                        ))
+                      : [
+                          <div key={`r-${rowIdx}`}>
+                            <MonoBlock code={row} />
+                          </div>,
+                        ]
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500 italic">No retrieved code yet.</div>
+            )}
+          </CardBox>
+
           <CardBox icon={<CheckCircle2 className="h-5 w-5" />} title="Final Code">
             {bundle.finalCode ? (
               <div className="space-y-3">
@@ -825,14 +810,6 @@ export default function CanvasCodeSynthesis() {
               </div>
             ) : (
               <div className="text-sm text-slate-500 italic">No code generated yet.</div>
-            )}
-
-            {/* stream log for debug */}
-            {logLines.length > 0 && (
-              <details className="mt-3">
-                <summary className="text-sm text-slate-600 cursor-pointer">Stream log (last {logLines.length} lines)</summary>
-                <pre className="mt-2 text-xs bg-slate-50 border rounded-lg p-2 max-h-40 overflow-auto">{logLines.join("\n")}</pre>
-              </details>
             )}
           </CardBox>
         </div>

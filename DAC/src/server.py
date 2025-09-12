@@ -69,28 +69,16 @@ class Server(BaseModel):
                     - max_tokens: int = 2048
                 }
               }
-            - candidate_num: int = 10
         """
 
         """
         Example response: Streaming
-        {"requirements_raw": [str], "requirements": [str]}
-        {"plan_raw": [str], "plan": [str]}
-        {"gen_tc_raw": [str], "gen_tc": {
-                                                    "fr": "",
-                                                    "general": "",
-                                                    "edge": "",
-                                                    "nfr": "",
-                                                    "performance": "",
-                                                    "sqr": "",
-                                                    "robustness": "",
-                                                    "maintainability": ""
-                                                }}
-        {"code_raw": [str], "code": [str]}
-        {"gen_tc_exec_code": [[str]]}
-        {"gen_tc_exec_result": [[str]]} # "Exit Code: 0\n"
-        {"gen_tc_passed": [[bool]]}
-
+        {"code_plan_raw":["string"],"code_plan":["string"]}
+        {"pseudocodes_raw":["string"],"pseudocodes":["string"]}
+        {"retrieval_identifications_raw":["string"],"retrieval_identifications":["string"]}
+        {"retrieval_queries_raw":["string"],"retrieval_queries":["string"],"retrieval_queries_target":[["string"]]}
+        {"retrieved_codes_without_backticks":[["string"]],"retrieved_codes_with_backticks":["string"]}
+        {"code_raw":["string"],"code":["string"]}
         """
 
         @app.route("/health", methods=["GET"])
