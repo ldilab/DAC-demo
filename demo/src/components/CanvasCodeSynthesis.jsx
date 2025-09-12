@@ -16,7 +16,37 @@ import SyntaxHighlighter from "react-syntax-highlighter";
 import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import Editor from "@monaco-editor/react";
 
-// --------------------------- Small UI bits ---------------------------
+/***************************
+ * Skeleton & small UI bits *
+ ***************************/
+function Spinner({ className = "h-4 w-4" }) {
+  return (
+    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" aria-hidden>
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  );
+}
+
+function Skeleton({ className = "" }) {
+  return <div className={`animate-pulse bg-slate-200/80 rounded-md ${className}`} />;
+}
+
+function CodeSkeleton({ lines = 6 }) {
+  return (
+    <div className="rounded-xl border bg-white p-3">
+      <div className="space-y-2">
+        {Array.from({ length: lines }).map((_, i) => (
+          <Skeleton key={i} className={`h-3 ${i % 5 === 0 ? "w-4/5" : i % 3 === 0 ? "w-3/4" : "w-full"}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/***************************
+ * Existing small UI bits   *
+ ***************************/
 function CardBox({ icon, title, right, children }) {
   return (
     <div className="rounded-2xl border bg-white/70 backdrop-blur shadow-sm p-4 md:p-5">
@@ -73,14 +103,16 @@ function CopyButton({ text }) {
     <button
       onClick={() => copy(text)}
       className="inline-flex items-center gap-1 rounded-xl border px-2.5 py-1 text-sm hover:bg-gray-50"
+      aria-label="Copy to clipboard"
     >
       <CopyIcon className="h-4 w-4" /> {copied ? "Copied!" : "Copy"}
     </button>
   );
 }
 
-// --------------------------- Utilities ---------------------------
-// Remove ``` fences (and optional language) around code blocks
+/****************
+ *  Utilities   *
+ ****************/
 function stripFences(s) {
   if (!s) return "";
   let t = String(s).trim();
@@ -89,40 +121,25 @@ function stripFences(s) {
   return t.trim();
 }
 
-// Loosely parse Python-like lists/dicts into JS objects.
-// Tries JSON.parse first, then does small replacements for Python literal syntax,
-// and finally falls back to Function constructor (last resort).
 function looseParseArray(text) {
   if (!text) return [];
   const raw = stripFences(text);
-
-  // try JSON first
   try {
     const v = JSON.parse(raw);
     if (Array.isArray(v)) return v;
   } catch (e) {}
-
-  // try to convert python-like literal to JSON-ish
   try {
     let t = raw
       .replace(/\bTrue\b/g, "true")
       .replace(/\bFalse\b/g, "false")
       .replace(/\bNone\b/g, "null");
-
-    // convert keys like 'key': to "key":
     t = t.replace(/'([a-zA-Z0-9_\- ]+)'(?=\s*:)/g, '"$1"');
-    // convert single-quoted strings to double-quotes
     t = t.replace(/'([^']*)'/g, function (_m, inner) {
       return '"' + inner.replace(/\\\"/g, "\\\"") + '"';
     });
-
     const parsed = JSON.parse(t);
     if (Array.isArray(parsed)) return parsed;
-  } catch (e) {
-    // continue to next fallback
-  }
-
-  // Last resort: try executing as JS expression (trusted inputs only)
+  } catch (e) {}
   try {
     // eslint-disable-next-line no-new-func
     const fn = new Function("return (" + raw + ");");
@@ -134,7 +151,6 @@ function looseParseArray(text) {
   }
 }
 
-// Mask API key for header preview
 function maskKey(k) {
   if (!k) return "";
   const start = k.slice(0, 5);
@@ -142,7 +158,6 @@ function maskKey(k) {
   return `${start}..${end}`;
 }
 
-// Helper to index array of objects by a key
 function indexBy(arr = [], key = "function") {
   const map = new Map();
   (arr || []).forEach((o) => {
@@ -151,20 +166,22 @@ function indexBy(arr = [], key = "function") {
   return map;
 }
 
-// --------------------------- Main Component ---------------------------
+/***********************
+ * Main Component      *
+ ***********************/
 export default function CanvasCodeSynthesis() {
   const [problem, setProblem] = useState(
     "Given a string and an integer k, determine if the string can be rearranged into a palindrome after removing k characters."
   );
 
   const [bundle, setBundle] = useState({
-    codePlan: [], // [{ function, functionality }]
-    pseudocodeObjs: [], // [{ function, functionality, pseudocode }]
-    retrievalIdentifications: [], // [{ function, functionality, pseudocode, do_retrieval }]
-    retrievalQueries: [], // [{ function, retrieval_query, do_retrieval }]
-    retrievalQueriesTarget: [], // string[][]
-    retrievalResults: [], // string[][] (per function or per query) — legacy/optional
-    retrievalRaw: [], // <-- NEW: store retrieved_codes_* exactly as received (no normalization)
+    codePlan: [],
+    pseudocodeObjs: [],
+    retrievalIdentifications: [],
+    retrievalQueries: [],
+    retrievalQueriesTarget: [],
+    retrievalResults: [],
+    retrievalRaw: [],
     finalCode: "",
     stream: {},
   });
@@ -183,7 +200,6 @@ export default function CanvasCodeSynthesis() {
   const [tmpApiKey, setTmpApiKey] = useState("");
   const [rememberKey, setRememberKey] = useState(true);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  // new: when user clicked Generate but key missing, this flags we should start generating after save
   const [pendingGenerate, setPendingGenerate] = useState(false);
 
   const [streaming, setStreaming] = useState(false);
@@ -195,14 +211,13 @@ export default function CanvasCodeSynthesis() {
       const saved = localStorage.getItem("archcode_api_key");
       if (saved) {
         setApiKey(saved);
-        setTmpApiKey(saved); // prefill modal
+        setTmpApiKey(saved);
       }
     } catch {}
   }, []);
 
   const keySet = !!(apiKey && apiKey.trim());
 
-  // centralized modal close so we can clear pendingGenerate if user cancels
   function handleCloseApiKeyModal(cancel = false) {
     setShowApiKeyModal(false);
     if (cancel) setPendingGenerate(false);
@@ -219,7 +234,7 @@ export default function CanvasCodeSynthesis() {
 
   function handleSaveApiKey() {
     const k = (tmpApiKey || "").trim();
-    if (!k) return; // require non-empty to save here; use Clear to remove
+    if (!k) return;
     setApiKey(k);
     try {
       if (rememberKey) localStorage.setItem("archcode_api_key", k);
@@ -228,10 +243,8 @@ export default function CanvasCodeSynthesis() {
 
     setShowApiKeyModal(false);
 
-    // If user opened modal as part of Generate flow, start streaming now.
     if (pendingGenerate) {
       setPendingGenerate(false);
-      // small timeout so modal finishes closing and UI updates before network starts
       setTimeout(() => {
         streamFromApi();
       }, 50);
@@ -244,13 +257,10 @@ export default function CanvasCodeSynthesis() {
     try {
       localStorage.removeItem("archcode_api_key");
     } catch {}
-    // closing modal and treat as cancellation (don't start generate)
     handleCloseApiKeyModal(true);
   }
 
-  // Centralized stream message handler — writes both raw stream and top-level UI fields
   const handleStreamMessage = (msg) => {
-    // --- CODE PLAN --- (seed order & function/functionality)
     if (msg.code_plan || msg.code_plan_raw) {
       const planArrTxt = Array.isArray(msg.code_plan) ? msg.code_plan[0] : msg.code_plan_raw?.[0] || "";
       const plan = looseParseArray(planArrTxt);
@@ -262,7 +272,6 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
-    // --- PSEUDOCODES --- (attach pseudocode per function)
     if (msg.pseudocodes || msg.pseudocodes_raw) {
       const pcsTxt = Array.isArray(msg.pseudocodes) ? msg.pseudocodes[0] : msg.pseudocodes_raw?.[0] || "";
       const pcs = looseParseArray(pcsTxt);
@@ -274,7 +283,6 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
-    // --- RETRIEVAL IDENTIFICATIONS --- (do_retrieval + optional pseudocode)
     if (msg.retrieval_identifications || msg.retrieval_identifications_raw) {
       const srcTxt = Array.isArray(msg.retrieval_identifications)
         ? msg.retrieval_identifications[0]
@@ -288,7 +296,6 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
-    // --- RETRIEVAL QUERIES ---
     if (msg.retrieval_queries || msg.retrieval_queries_raw) {
       const srcTxt = Array.isArray(msg.retrieval_queries)
         ? msg.retrieval_queries[0]
@@ -302,32 +309,24 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
-    // --- RETRIEVAL QUERIES TARGET ---
     if (msg.retrieval_queries_target) {
       const tgt = Array.isArray(msg.retrieval_queries_target) ? msg.retrieval_queries_target : [];
       setBundle((prev) => ({ ...prev, retrievalQueriesTarget: tgt }));
       return;
     }
 
-    // --- RETRIEVED CODES (NEW: store raw exactly as received) ---
     if (msg.retrieved_codes_with_backticks || msg.retrieved_codes_without_backticks) {
-      // We'll prefer the backticks variant if present, otherwise fallback to without_backticks.
       const raw = msg.retrieved_codes_with_backticks || msg.retrieved_codes_without_backticks || [];
-      // store as-is (could be array-of-strings or array-of-array-of-strings)
       const arr = Array.isArray(raw) ? raw : [raw];
-
       setBundle((prev) => ({
         ...prev,
-        // keep legacy retrievalResults empty/unchanged to avoid old alignment logic using targets
         retrievalResults: prev.retrievalResults || [],
-        // new: raw retrieval data exactly as received (no cleaning/normalization)
         retrievalRaw: arr,
         stream: { ...(prev.stream || {}), retrieved_raw: raw },
       }));
       return;
     }
 
-    // --- FINAL CODE ---
     if (msg.code || msg.code_raw) {
       const final =
         (Array.isArray(msg.code) && msg.code[0]) ||
@@ -342,16 +341,12 @@ export default function CanvasCodeSynthesis() {
     }
   };
 
-  // Build merged per-function steps (2–6) from whatever we have so far
   const steps = useMemo(() => {
     const plan =
       (Array.isArray(bundle.codePlan) && bundle.codePlan.length ? bundle.codePlan : bundle.retrievalIdentifications) || [];
     const byPcs = indexBy(bundle.pseudocodeObjs || []);
     const byIdent = indexBy(bundle.retrievalIdentifications || []);
     const byQuery = indexBy(bundle.retrievalQueries || []);
-
-    // Note: we intentionally DO NOT try to align `retrievalRaw` to queries/targets here.
-    // Search results are shown in a separate box and are rendered raw.
 
     const merged = plan.map((item, idx) => {
       const f = item?.function || item?.name || `function-${idx + 1}`;
@@ -366,14 +361,17 @@ export default function CanvasCodeSynthesis() {
         pseudocode: fromP?.pseudocode || fromI?.pseudocode || "",
         do_retrieval: Boolean(fromI?.do_retrieval ?? fromQ?.do_retrieval ?? false),
         retrieval_query: fromQ?.retrieval_query || "",
-        targeted_queries: Array.isArray(bundle.retrievalQueriesTarget?.[idx]) ? bundle.retrievalQueriesTarget[idx] : (Array.isArray(bundle.retrievalQueriesTarget?.[0]) ? bundle.retrievalQueriesTarget[0] : []),
+        targeted_queries: Array.isArray(bundle.retrievalQueriesTarget?.[idx])
+          ? bundle.retrievalQueriesTarget[idx]
+          : Array.isArray(bundle.retrievalQueriesTarget?.[0])
+          ? bundle.retrievalQueriesTarget[0]
+          : [],
       };
     });
 
     return merged;
   }, [bundle]);
 
-  // ---- Streaming from server ----
   async function streamFromApi() {
     if (streaming) return;
     setStreaming(true);
@@ -463,7 +461,9 @@ export default function CanvasCodeSynthesis() {
     if (abortRef.current) abortRef.current.abort();
   }
 
-  // --------------------------- Render ---------------------------
+  /****************
+   *   Render     *
+   ****************/
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
       {/* HEADER */}
@@ -474,7 +474,6 @@ export default function CanvasCodeSynthesis() {
             DAC DEMO
           </span>
           <div className="flex items-center gap-2">
-            {/* API key button (green when set, amber when missing) */}
             {llm.platform === "openai" && (
               <button
                 onClick={openApiKeyModal}
@@ -499,7 +498,7 @@ export default function CanvasCodeSynthesis() {
             )}
 
             {streaming ? (
-              <span className="inline-flex items-center gap-2 text-xs text-violet-700 bg-violet-50 border border-violet-200 px-2 py-1 rounded-full">
+              <span className="inline-flex items-center gap-2 text-xs text-violet-700 bg-violet-50 border border-violet-200 px-2 py-1 rounded-full" role="status" aria-live="polite">
                 <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
                 Streaming…
               </span>
@@ -510,23 +509,9 @@ export default function CanvasCodeSynthesis() {
             {/* TEST: Inject sample stream data */}
             <button
               onClick={() => {
-                // Minimal test payload to validate mapping without calling backend
                 const sample = {
-                  retrieval_queries_target: [
-                    [
-                      "Query A",
-                      "Query B",
-                    ],
-                  ],
-                  retrieved_codes_without_backticks: [
-                    [
-                      "**Doc 1**\n```python\nprint('A1')\n```",
-                      "**Doc 2**\n```python\nprint('A2')\n```",
-                    ],
-                    [
-                      "**Doc 3**\n```python\nprint('B1')\n```",
-                    ],
-                  ],
+                  retrieval_queries_target: [["Query A", "Query B"]],
+                  retrieved_codes_without_backticks: [["**Doc 1**\n```python\nprint('A1')\n```", "**Doc 2**\n```python\nprint('A2')\n```"], ["**Doc 3**\n```python\nprint('B1')\n```"]],
                 };
                 handleStreamMessage(sample);
               }}
@@ -554,7 +539,7 @@ export default function CanvasCodeSynthesis() {
 
             <label className="block text-sm mb-1 text-slate-700">OpenAI API key</label>
             <input
-              type="text"
+              type="password"
               className="w-full border rounded-lg px-3 py-2 mb-3 bg-white"
               placeholder="sk-..."
               value={tmpApiKey}
@@ -605,13 +590,13 @@ export default function CanvasCodeSynthesis() {
                 <button
                   onClick={() => setShowLlm((v) => !v)}
                   className="inline-flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  disabled={streaming}
                 >
                   <Settings className="h-4 w-4" /> Params
                 </button>
                 {!streaming ? (
                   <button
                     onClick={() => {
-                      // If API key is set we can generate immediately; otherwise open modal and remember intent
                       if (keySet) {
                         streamFromApi();
                       } else {
@@ -634,21 +619,27 @@ export default function CanvasCodeSynthesis() {
               </div>
             }
           >
-            <textarea
-              value={problem}
-              onChange={(e) => setProblem(e.target.value)}
-              placeholder="Describe what the program must do..."
-              className="w-full rounded-xl border px-3 py-2 bg-white focus:outline-none focus:ring-2 ring-violet-200"
-              rows={5}
-              disabled={streaming}
-            />
+            <div className="relative">
+              <textarea
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+                placeholder="Describe what the program must do..."
+                className="w-full rounded-xl border px-3 py-2 bg-white focus:outline-none focus:ring-2 ring-violet-200"
+                rows={5}
+                disabled={streaming}
+                aria-busy={streaming}
+              />
+              {streaming && (
+                <div className="absolute inset-0 rounded-xl bg-white/60 pointer-events-none" />
+              )}
+            </div>
 
             {showLlm && (
-              <div className="mt-3 rounded-2xl border bg-white p-3 space-y-3">
+              <div className="mt-3 rounded-2xl border bg-white p-3 space-y-3" aria-busy={streaming}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <label className="text-sm">
                     <span className="block text-slate-600 mb-1">Platform</span>
-                    <select className="w-full border rounded-md px-2 py-1" value={llm.platform} onChange={(e) => setLlm((p) => ({ ...p, platform: e.target.value }))}>
+                    <select className="w-full border rounded-md px-2 py-1" value={llm.platform} onChange={(e) => setLlm((p) => ({ ...p, platform: e.target.value }))} disabled={streaming}>
                       <option value="openai">openai</option>
                       <option disabled value="azure">azure</option>
                       <option disabled value="anthropic">anthropic</option>
@@ -656,11 +647,11 @@ export default function CanvasCodeSynthesis() {
                   </label>
                   <label className="text-sm">
                     <span className="block text-slate-600 mb-1">Model</span>
-                    <input className="w-full border rounded-md px-2 py-1" value={llm.model_name} onChange={(e) => setLlm((p) => ({ ...p, model_name: e.target.value }))} />
+                    <input className="w-full border rounded-md px-2 py-1" value={llm.model_name} onChange={(e) => setLlm((p) => ({ ...p, model_name: e.target.value }))} disabled={streaming} />
                   </label>
                   <label className="text-sm">
                     <span className="block text-slate-600 mb-1">Decoding</span>
-                    <select className="w-full border rounded-md px-2 py-1" value={llm.strategy} onChange={(e) => setLlm((p) => ({ ...p, strategy: e.target.value }))}>
+                    <select className="w-full border rounded-md px-2 py-1" value={llm.strategy} onChange={(e) => setLlm((p) => ({ ...p, strategy: e.target.value }))} disabled={streaming}>
                       <option value="greedy">greedy</option>
                       <option value="nucleus">nucleus</option>
                     </select>
@@ -670,20 +661,19 @@ export default function CanvasCodeSynthesis() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <label className="text-xs">
                     <span className="block mb-1">Temp</span>
-                    <input type="number" step="0.01" min="0" max="2" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.temperature} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, temperature: parseFloat(e.target.value) } }))} />
+                    <input type="number" step="0.01" min="0" max="2" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.temperature} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, temperature: parseFloat(e.target.value) } }))} disabled={streaming} />
                   </label>
                   <label className="text-xs">
                     <span className="block mb-1">Top_p</span>
-                    <input type="number" step="0.01" min="0" max="1" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.top_p} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, top_p: parseFloat(e.target.value) } }))} />
+                    <input type="number" step="0.01" min="0" max="1" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.top_p} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, top_p: parseFloat(e.target.value) } }))} disabled={streaming} />
                   </label>
                   <label className="text-xs">
                     <span className="block mb-1">Max tok</span>
-                    <input type="number" step="1" min="1" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.max_tokens} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, max_tokens: parseInt(e.target.value) } }))} />
+                    <input type="number" step="1" min="1" className="w-full border rounded-md px-2 py-1" value={llm.kwargs.max_tokens} onChange={(e) => setLlm((p) => ({ ...p, kwargs: { ...p.kwargs, max_tokens: parseInt(e.target.value) } }))} disabled={streaming} />
                   </label>
                 </div>
               </div>
             )}
-            {/* stream log for debug */}
             {logLines.length > 0 && (
               <details className="mt-3">
                 <summary className="text-sm text-slate-600 cursor-pointer">Stream log (last {logLines.length} lines)</summary>
@@ -692,12 +682,11 @@ export default function CanvasCodeSynthesis() {
             )}
           </CardBox>
 
-          {/* 2–6) Retrieval Pipeline — function-first boxes that fill in progressively */}
+          {/* 2–6) Retrieval Pipeline */}
           <CardBox icon={<Beaker className="h-5 w-5" />} title="2–6) Retrieval Pipeline">
             {steps.length ? (
               steps.map((st, i) => (
                 <div key={i} className="mb-6 rounded-2xl border p-4 bg-white">
-                  {/* Header row with search-needed tag */}
                   <div>
                     {st.do_retrieval ? (
                       <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
@@ -716,7 +705,6 @@ export default function CanvasCodeSynthesis() {
                     </div>
                   </div>
 
-                  {/* Pseudocode */}
                   {st.pseudocode && (
                     <div className="mt-3">
                       <div className="text-xs uppercase text-slate-500 mb-1">Pseudocode</div>
@@ -724,23 +712,37 @@ export default function CanvasCodeSynthesis() {
                     </div>
                   )}
 
-                  {/* Retrieval query (optional) */}
                   {st.retrieval_query && (
                     <div className="mt-3">
                       <div className="text-xs uppercase text-slate-500 mb-1">Retrieval Query</div>
                       <MonoBlock code={st.retrieval_query} />
                     </div>
                   )}
-
-                  {/* NOTE: Search results are intentionally NOT rendered here anymore.
-                      They are displayed in the separate "Search Results" box below. */}
                 </div>
               ))
+            ) : streaming ? (
+              // Skeleton for steps while streaming
+              <div className="space-y-4" aria-live="polite">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="mb-2 rounded-2xl border p-4 bg-white">
+                    <div className="mb-2">
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full">
+                        <Spinner className="h-3 w-3" /> Preparing…
+                      </span>
+                    </div>
+                    <Skeleton className="h-5 w-1/3 mb-2" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <div className="mt-3">
+                      <div className="text-xs uppercase text-slate-500 mb-1">Pseudocode</div>
+                      <CodeSkeleton lines={5} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="text-sm text-slate-500 italic">No retrieval info yet.</div>
             )}
 
-            {/* debug fallback: show raw if nothing parsed */}
             {!steps.length && bundle.stream?.retrieval_identifications_raw?.[0] && (
               <details className="mt-3">
                 <summary className="text-xs text-slate-500 cursor-pointer">Raw identifications (debug)</summary>
@@ -752,17 +754,16 @@ export default function CanvasCodeSynthesis() {
 
         {/* RIGHT COLUMN */}
         <div className="space-y-6">
-          {/* NEW: Search Results shown in its own box, rendering retrieved_* exactly as received */}
+          {/* Search Results */}
           <CardBox icon={<Search className="h-5 w-5" />} title="Search Results">
             {bundle.retrievalRaw && bundle.retrievalRaw.length ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="font-semibold text-lg">Retrieved Code (raw)</div>
+                  <div className="font-semibold text-lg">Retrieved Codes</div>
                   <CopyButton text={Array.isArray(bundle.retrievalRaw) ? JSON.stringify(bundle.retrievalRaw, null, 2) : String(bundle.retrievalRaw)} />
                 </div>
 
                 <div className="space-y-2">
-                  {/* retrievalRaw may be array-of-strings or array-of-array-of-strings; flatten one level */}
                   {bundle.retrievalRaw.flatMap((row, rowIdx) =>
                     Array.isArray(row)
                       ? row.map((item, i) => (
@@ -778,11 +779,21 @@ export default function CanvasCodeSynthesis() {
                   )}
                 </div>
               </div>
+            ) : streaming ? (
+              <div className="space-y-3" role="status" aria-live="polite">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Spinner /> <span>Fetching code snippets…</span>
+                </div>
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <CodeSkeleton key={i} lines={7} />
+                ))}
+              </div>
             ) : (
               <div className="text-sm text-slate-500 italic">No retrieved code yet.</div>
             )}
           </CardBox>
 
+          {/* Final Code */}
           <CardBox icon={<CheckCircle2 className="h-5 w-5" />} title="Final Code">
             {bundle.finalCode ? (
               <div className="space-y-3">
@@ -806,6 +817,17 @@ export default function CanvasCodeSynthesis() {
                       automaticLayout: true,
                     }}
                   />
+                </div>
+              </div>
+            ) : streaming ? (
+              <div className="space-y-3" role="status" aria-live="polite">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Spinner /> <span>Waiting for generated code…</span>
+                </div>
+                <div className="rounded-2xl border overflow-hidden">
+                  <div className="h-[70vh] bg-white p-4">
+                    <CodeSkeleton lines={18} />
+                  </div>
                 </div>
               </div>
             ) : (
