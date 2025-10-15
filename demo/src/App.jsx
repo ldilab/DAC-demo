@@ -3,13 +3,12 @@ import React from "react";
 import CanvasCodeSynthesis from "./components/CanvasCodeSynthesis.jsx";
 import "./index.css";
 import PERCCanvasCodeSynthesis from "./components/perc.jsx";
-import {AlertCircle, KeyRound} from "lucide-react";
-
+import { Menu, X, ExternalLink} from "lucide-react";
+import { useState } from "react";
 // export default function App() {
 //     return <CanvasCodeSynthesis />;
 // }
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+
 
 function NavItem({ to, children, onClick }) {
   return (
@@ -19,7 +18,7 @@ function NavItem({ to, children, onClick }) {
       className={({ isActive }) =>
         [
           "relative px-3 py-1.5 rounded-xl text-sm font-medium transition-colors",
-          "hover:text-slate-900",
+          "hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
           isActive ? "text-slate-900" : "text-slate-600",
         ].join(" ")
       }
@@ -27,7 +26,6 @@ function NavItem({ to, children, onClick }) {
       {({ isActive }) => (
         <>
           {children}
-          {/* active underline pill */}
           <span
             className={[
               "absolute inset-x-1 -bottom-1 h-1 rounded-full transition-all",
@@ -37,6 +35,26 @@ function NavItem({ to, children, onClick }) {
         </>
       )}
     </NavLink>
+  );
+}
+
+/** 외부 링크 전용 아이템 (새 탭) */
+function ExternalNavItem({ href, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={[
+        "relative inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors",
+        "text-slate-700 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+      ].join(" ")}
+      aria-label={`${children} (새 탭)`}
+      title="새 탭에서 열기"
+    >
+      {children}
+      <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+    </a>
   );
 }
 
@@ -57,9 +75,12 @@ function Navbar() {
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           <div className="rounded-full border bg-white/70 px-1 py-0.5 shadow-sm">
+            {/* 순서: ARCHCODE, PERC, DAC */}
+            <ExternalNavItem href="http://ldi.snu.ac.kr:5173">ARCHCODE</ExternalNavItem>
+            <span className="mx-1 h-4 w-px align-middle inline-block bg-slate-200" />
             <NavItem to="/perc">PERC</NavItem>
             <span className="mx-1 h-4 w-px align-middle inline-block bg-slate-200" />
-              <NavItem to="/dac">DAC</NavItem>
+            <NavItem to="/dac">DAC</NavItem>
           </div>
         </nav>
 
@@ -78,6 +99,17 @@ function Navbar() {
       {open && (
         <div className="md:hidden">
           <div className="mx-4 mb-3 rounded-2xl border bg-white/80 p-2 shadow-sm backdrop-blur">
+            {/* 순서: ARCHCODE, PERC, DAC */}
+            <a
+              href="http://ldi.snu.ac.kr:5173"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+              onClick={() => setOpen(false)}
+            >
+              ARCHCODE <ExternalLink className="ml-1 inline h-3.5 w-3.5 opacity-70" />
+            </a>
+            <div className="my-1 h-px bg-slate-200" />
             <NavItem to="/perc" onClick={() => setOpen(false)}>
               PERC
             </NavItem>
@@ -85,7 +117,6 @@ function Navbar() {
             <NavItem to="/dac" onClick={() => setOpen(false)}>
               DAC
             </NavItem>
-
           </div>
         </div>
       )}
@@ -100,20 +131,37 @@ function Home() {
 
       {/* Landing section */}
       <main className="relative isolate">
-        {/* 그라디언트 배경 */}
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-50 to-slate-100" />
 
-        {/* 헤더 높이(3.5rem = h-14)만큼 뺀 뒤 정중앙 정렬 */}
         <section className="min-h-[calc(100vh-3.5rem)] flex items-center">
-          <div className="mx-auto w-full max-w-4xl px-4 text-center">
+          <div className="mx-auto w-full max-w-5xl px-4 text-center">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
               LDI Lab Autocoding Demo
             </h1>
-            {/*<p className="mt-2 text-slate-600">*/}
-            {/*  모드를 선택하세요. 간소화된 파이프라인(DAC) 또는 검색/인식 기반(PERC).*/}
-            {/*</p>*/}
-{/* 큼직한 선택 버튼 2개 — 순서: PERC, DAC */}
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            {/* 순서: ARCHCODE, PERC, DAC */}
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* ARCHCODE (외부 링크) */}
+              <a
+                href="http://ldi.snu.ac.kr:5173"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative overflow-hidden rounded-2xl border bg-white/80 p-8 text-left shadow-sm ring-1 ring-inset ring-slate-200 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                aria-label="Open ARCHCODE"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="rounded-xl border bg-amber-50 p-3 ring-1 ring-amber-100">
+                    <span className="block h-6 w-6 rounded-md bg-amber-400/80" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-slate-900">ARCHCODE</div>
+                    <div className="text-sm text-slate-600">Incorporating Software Requirements in Code Generation with Large Language Models</div>
+                  </div>
+                </div>
+                <span className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-200/40 blur-2xl transition group-hover:scale-150" />
+                <span className="mt-3 block text-xs text-amber-700/80">Open in new tab</span>
+              </a>
+
               {/* PERC */}
               <Link
                 to="/perc"
@@ -126,9 +174,7 @@ function Home() {
                   </div>
                   <div>
                     <div className="text-lg font-semibold text-slate-900">PERC</div>
-                    <div className="text-sm text-slate-600">
-                      Plan-as-Query Example Retrieval
-                    </div>
+                    <div className="text-sm text-slate-600">Plan-As-Query Example Retrieval</div>
                   </div>
                 </div>
                 <span className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-cyan-200/40 blur-2xl transition group-hover:scale-150" />
@@ -146,9 +192,7 @@ function Home() {
                   </div>
                   <div>
                     <div className="text-lg font-semibold text-slate-900">DAC</div>
-                    <div className="text-sm text-slate-600">
-                      Decompose problem then Compose retrieval
-                    </div>
+                    <div className="text-sm text-slate-600">Decompose problem and then Compose retrieval</div>
                   </div>
                 </div>
                 <span className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-violet-200/40 blur-2xl transition group-hover:scale-150" />
@@ -160,6 +204,7 @@ function Home() {
     </>
   );
 }
+
 
 function PERC() {
   return <PERCCanvasCodeSynthesis/>;
