@@ -1,0 +1,21 @@
+[
+  {
+    "id": "user_input/example",
+    "problem": "There are three cards with letters $\\texttt{a}$, $\\texttt{b}$, $\\texttt{c}$ placed in a row in some order. You can do the following operation at most once: \n\n- Pick two cards, and swap them. Is it possible that the row becomes $\\texttt{abc}$ after the operation? Output \"YES\" if it is possible, and \"NO\" otherwise.\n\nInput\n\nThe first line contains a single integer $t$ ($1 \\leq t \\leq 6$) — the number of test cases.\n\nThe only line of each test case contains a single string consisting of each of the three characters $\\texttt{a}$, $\\texttt{b}$, and $\\texttt{c}$ exactly once, representing the cards.\n\nOutput\n\nFor each test case, output \"YES\" if you can make the row $\\texttt{abc}$ with at most one operation, or \"NO\" otherwise.\n\nYou can output the answer in any case (for example, the strings \"yEs\", \"yes\", \"Yes\" and \"YES\" will be recognized as a positive answer).\n\nSample Input 1:\n6\nabc\nacb\nbac\nbca\ncab\ncba\n\nSample Output 1:\nYES\nYES\nYES\nNO\nNO\nYES\n\nNote\n\nIn the first test case, we don't need to do any operations, since the row is already $\\texttt{abc}$.\n\nIn the second test case, we can swap $\\texttt{c}$ and $\\texttt{b}$: $\\texttt{acb} \\to \\texttt{abc}$.\n\nIn the third test case, we can swap $\\texttt{b}$ and $\\texttt{a}$: $\\texttt{bac} \\to \\texttt{abc}$.\n\nIn the fourth test case, it is impossible to make $\\texttt{abc}$ using at most one operation.",
+
+    "pseudocode": " \\n# Define a function to count bidirectional tuple pairs. \\n# Create a map to store pairs and their reverse occurrences. \\n# Initialize a counter for bidirectional pairs. \\n# Iterate over the input list of tuples. \\n# Retrieve the two elements of the tuple. \\n# Create both the original pair and the reverse pair. \\n# Check if the reverse pair exists in the map. \\n# If it does, increment the bidirectional pair count and decrement the occurrence of the reverse \\npair in the map. \\n# If the reverse pair does not exist in the map, increment the occurrence of the original pair in the \\nmap. \\n# Return the count of bidirectional pairs.",
+
+    "retrievals": [
+      "def min_swaps(str1: str, str2: str) -> int or str:\n    \"\"\"\n    Count the minimum number of swaps required to convert one binary string to another.\n\n    :param str1: First binary string\n    :param str2: Second binary string\n    :return: Minimum number of swaps required or \"Not Possible\"\n    \"\"\"\n    count = count_differences(str1, str2)\n    if is_swap_possible(count):\n        return calculate_min_swaps(count)\n    else:\n        return \"Not Possible\""
+    ],
+
+    "retrieved_codes_with_backticks": [
+      "**Function 1**\n```python\ndef min_swaps(str1: str, str2: str) -> int or str:\n    \"\"\"\n    Count the minimum number of swaps required to convert one binary string to another.\n\n    :param str1: First binary string\n    :param str2: Second binary string\n    :return: Minimum number of swaps required or \"Not Possible\"\n    \"\"\"\n    count = count_differences(str1, str2)\n    if is_swap_possible(count):\n        return calculate_min_swaps(count)\n    else:\n        return \"Not Possible\"\n```"
+    ],
+
+    "code": [
+      "# YOUR CODE HERE\ndef can_form_abc(s):\n    if s == \"abc\":\n        return \"YES\"\n    elif s in [\"acb\", \"bac\", \"cba\", \"cab\"]:\n        return \"YES\"\n    else:\n        return \"NO\"\n\nt = int(input())\nfor _ in range(t):\n    s = input().strip()\n    print(can_form_abc(s))"
+    ]
+  }
+
+]

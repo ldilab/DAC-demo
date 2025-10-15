@@ -17,6 +17,22 @@ services:
       retries: 6
       start_period: 25s
 
+  perc_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server.perc
+    container_name: perc-server
+    ports:
+      - "8089:8089"
+    networks:
+      - dac-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8089/health || curl -fsS http://localhost:8089/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+
   demo:
     build:
       context: .
@@ -28,6 +44,7 @@ services:
       - dac-net
     environment:
       - VITE_API_URL=http://ldi.snu.ac.kr:8083
+      - VITE_PERC_URL=http://ldi.snu.ac.kr:8089
     depends_on:
       server:
         condition: service_healthy

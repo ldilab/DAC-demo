@@ -1,0 +1,48 @@
+# =========================
+# DAC Server (Miniconda, with retries)
+# =========================
+FROM continuumio/miniconda3:24.1.2-0
+
+SHELL ["/bin/bash", "-lc"]
+WORKDIR /app
+
+# 시스템 패키지
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# 소스 복사
+COPY ./DAC /app
+
+# conda 안정화 설정: libmamba solver + 캐시 디렉터리
+ENV CONDA_PKGS_DIRS=/opt/conda/pkgs_cache
+RUN mkdir -p $CONDA_PKGS_DIRS && \
+    conda install -n base -y conda-libmamba-solver && \
+    conda config --set solver libmamba && \
+    conda config --set channel_priority flexible
+
+# Python 3.10 환경 생성 (최대 3회 재시도) + 존재 검증
+RUN set -euo pipefail; \
+    for i in 1 2 3; do \
+      echo "[try $i/3] conda create -n DAC -c conda-forge -c defaults python=3.10"; \
+      conda create -n DAC -c conda-forge -c defaults python=3.10 -y && break || { \
+        echo "conda create failed ($i). Cleaning & retrying..."; \
+        conda clean -a -y; \
+        sleep 5; \
+      }; \
+    done; \
+    test -d /opt/conda/envs/DAC || { echo "FATAL: conda env 'DAC' not created"; conda env list || true; exit 1; }; \
+    conda run -n DAC python -V
+
+# requirements 설치 (DAC env에서)
+COPY ./DAC/requirements.txt /app/requirements.txt
+RUN conda run -n DAC pip install --no-cache-dir -r requirements.txt
+
+COPY ./DAC /app
+RUN conda run -n DAC pip install -e third_party/expand_langchain
+
+# 포트
+EXPOSE 8089
+
+# 실행
+CMD ["conda", "run", "--no-capture-output", "-n", "DAC", "python", "run.py", "perc_server", "-", "run", "--port=8089"]

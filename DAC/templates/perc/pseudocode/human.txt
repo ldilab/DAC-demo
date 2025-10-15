@@ -1,0 +1,19 @@
+# Inputs
+## Problem
+```plaintext
+{{ problem }}
+```
+
+# Instruction
+Given the problem description, write natural language pseudocode for each function in the code plan.
+
+# Requirements
+- The output should be written in a separate code block using three backticks (```) at the beginning and end.
+- Do not write the actual code.
+- Do not write the testcase runner.
+- Do not describe the implementation details and add any comments.
+
+# Output Format{% raw %}
+```python
+{{ pseudocode }}
+```{% endraw %}

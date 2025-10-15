@@ -15,7 +15,7 @@ import {
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import Editor from "@monaco-editor/react";
-import { Routes, Route, Link, useParams, useNavigate, NavLink } from "react-router-dom";
+import {Link} from "react-router-dom";
 
 /***************************
  * Skeleton & small UI bits *
@@ -70,9 +70,7 @@ function MonoBlock({ code, className }) {
         language="python"
         style={docco}
         wrapLongLines={true}
-        // customStyle로 pre 스타일 조정: 배경 투명, 패딩 제거
         customStyle={{ background: "transparent", padding: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-        // 내부 코드 태그에도 줄바꿈 스타일 적용 (안정성)
         codeTagProps={{ style: { whiteSpace: "pre-wrap", wordBreak: "break-word" } }}
       >
         {String(code ?? "")}
@@ -178,7 +176,7 @@ function indexBy(arr = [], key = "function") {
 /***********************
  * Main Component      *
  ***********************/
-export default function CanvasCodeSynthesis() {
+export default function PERCCanvasCodeSynthesis() {
   const [problem, setProblem] = useState(
     "Given a string and an integer k, determine if the string can be rearranged into a palindrome after removing k characters."
   );
@@ -186,6 +184,8 @@ export default function CanvasCodeSynthesis() {
   const [bundle, setBundle] = useState({
     codePlan: [],
     pseudocodeObjs: [],
+    // ✅ NEW: simplified pipeline single-string pseudocode
+    pseudocodeText: "",
     retrievalIdentifications: [],
     retrievalQueries: [],
     retrievalQueriesTarget: [],
@@ -270,6 +270,26 @@ export default function CanvasCodeSynthesis() {
   }
 
   const handleStreamMessage = (msg) => {
+    // ✅ NEW: singular pseudocode support (simplified pipeline response)
+    if (msg.pseudocode || msg.pseudocode_raw) {
+      const pcsTxt =
+        (Array.isArray(msg.pseudocode) && msg.pseudocode[0]) ||
+        (Array.isArray(msg.pseudocode_raw) && msg.pseudocode_raw[0]) ||
+        (typeof msg.pseudocode === "string" ? msg.pseudocode : "") ||
+        (typeof msg.pseudocode_raw === "string" ? msg.pseudocode_raw : "") ||
+        "";
+      setBundle((prev) => ({
+        ...prev,
+        pseudocodeText: stripFences(pcsTxt),
+        stream: {
+          ...(prev.stream || {}),
+          pseudocode_raw: msg.pseudocode_raw || msg.pseudocode || [],
+        },
+      }));
+      return;
+    }
+
+    // (legacy) plan array still supported
     if (msg.code_plan || msg.code_plan_raw) {
       const planArrTxt = Array.isArray(msg.code_plan) ? msg.code_plan[0] : msg.code_plan_raw?.[0] || "";
       const plan = looseParseArray(planArrTxt);
@@ -281,6 +301,7 @@ export default function CanvasCodeSynthesis() {
       return;
     }
 
+    // (legacy) array pseudocodes still supported
     if (msg.pseudocodes || msg.pseudocodes_raw) {
       const pcsTxt = Array.isArray(msg.pseudocodes) ? msg.pseudocodes[0] : msg.pseudocodes_raw?.[0] || "";
       const pcs = looseParseArray(pcsTxt);
@@ -378,6 +399,21 @@ export default function CanvasCodeSynthesis() {
       };
     });
 
+    // ✅ Fallback: simplified pipeline (single pseudocode string)
+    if ((!merged || merged.length === 0) && bundle.pseudocodeText) {
+      return [
+        {
+          index: 0,
+          function: "solve",
+          functionality: "High-level pseudocode",
+          pseudocode: bundle.pseudocodeText,
+          do_retrieval: false,
+          retrieval_query: "",
+          targeted_queries: [],
+        },
+      ];
+    }
+
     return merged;
   }, [bundle]);
 
@@ -387,6 +423,7 @@ export default function CanvasCodeSynthesis() {
     setBundle({
       codePlan: [],
       pseudocodeObjs: [],
+      pseudocodeText: "", // ✅ reset for new stream
       retrievalIdentifications: [],
       retrievalQueries: [],
       retrievalQueriesTarget: [],
@@ -408,7 +445,7 @@ export default function CanvasCodeSynthesis() {
     abortRef.current = controller;
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/generate`, {
+      const res = await fetch(`${import.meta.env.VITE_PERC_URL}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -481,7 +518,7 @@ export default function CanvasCodeSynthesis() {
           <Link to="/">
             <span className="text-slate-800 font-bold tracking-tight flex items-center gap-2">
               <img src="/ldi-logo.svg" width={30} height={30} alt="logo" />
-              DAC DEMO
+              PERC DEMO
             </span>
           </Link>
           <div className="flex items-center gap-2">
@@ -694,21 +731,10 @@ export default function CanvasCodeSynthesis() {
           </CardBox>
 
           {/* 2–6) Retrieval Pipeline */}
-          <CardBox icon={<Beaker className="h-5 w-5" />} title="2–6) Retrieval Pipeline">
+          <CardBox icon={<Beaker className="h-5 w-5" />} title="Pseudocode">
             {steps.length ? (
               steps.map((st, i) => (
                 <div key={i} className="mb-6 rounded-2xl border p-4 bg-white">
-                  <div>
-                    {st.do_retrieval ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
-                        <Search className="h-3.5 w-3.5" /> Search
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full">
-                        <Ban className="h-3.5 w-3.5" /> No Search
-                      </span>
-                    )}
-                  </div>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-semibold text-lg">{st.function}</div>

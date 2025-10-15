@@ -3,6 +3,7 @@ from expand_langchain.evaluator import Evaluator
 from expand_langchain.generator import Generator
 
 from src.server import Server
+from src.perc_server import Server as PercServer
 
 if __name__ == "__main__":
     fire.Fire(
@@ -10,5 +11,6 @@ if __name__ == "__main__":
             "evaluator": Evaluator,
             "generator": Generator,
             "server": Server,
+            "perc_server": PercServer
         }
     )
