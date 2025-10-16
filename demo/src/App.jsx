@@ -1,10 +1,10 @@
-import { Routes, Route, Link, useParams, useNavigate, NavLink } from "react-router-dom";
+import { Routes, Route, Link, useParams, useNavigate, NavLink, useLocation } from "react-router-dom";
 import React from "react";
 import CanvasCodeSynthesis from "./components/CanvasCodeSynthesis.jsx";
 import "./index.css";
 import PERCCanvasCodeSynthesis from "./components/perc.jsx";
 import { Menu, X, ExternalLink} from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // export default function App() {
 //     return <CanvasCodeSynthesis />;
 // }
@@ -215,6 +215,17 @@ function DAC () {
 }
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const titleMap = {
+      "/": "LDI Demo",
+      "/perc": "PERC | LDI Demo",
+      "/dac": "DAC | LDI Demo",
+    };
+    document.title = titleMap[location.pathname] ?? "404 Not Found | LDI Demo";
+  }, [location.pathname]);
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
@@ -224,3 +235,4 @@ export default function App() {
     </Routes>
   );
 }
+
